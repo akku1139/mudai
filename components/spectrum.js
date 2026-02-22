@@ -1,0 +1,20 @@
+// @ts-check
+import { createComponent } from '../core/component.js';
+
+export const spectrumObject = createComponent((ctx, props, state, t, b, s) => {
+  if (!s || s.length === 0) return;
+  // 状態がリセットされていれば初期化
+  if (!state.smoothedData || state.smoothedData.length !== s.length) {
+    state.smoothedData = new Float32Array(s.length);
+  }
+
+  ctx.fillStyle = props.color ?? '#ffffff';
+  const barWidth = props._w / s.length;
+
+  for (let i = 0; i < s.length; i++) {
+    state.smoothedData[i] += (s[i] - state.smoothedData[i]) * 0.2;
+    const h = (state.smoothedData[i] / 255) * props._h;
+    // (0,0) を基準に描画するため、y方向は上へ伸ばす
+    ctx.fillRect(i * barWidth, -h, barWidth - 1, h);
+  }
+});
