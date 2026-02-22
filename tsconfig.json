@@ -5,12 +5,10 @@
     "moduleResolution": "bundler",
 
     // Module
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": false,
+    "esModuleInterop": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true, // Windows...
-    "resolveJsonModule": true,
 
     "noEmit": true,
     "allowImportingTsExtensions": true,
@@ -27,8 +25,8 @@
     "noImplicitOverride": true,
     "erasableSyntaxOnly": true,
 
-    //"types": [
-    //  "node"
-    //]
+    "types": [
+      "node"
+    ]
   }
 }
