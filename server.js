@@ -28,6 +28,9 @@ const server = http.createServer((req, res) => {
   const packagePath = path.join(PACKAGE_LIB_DIR, targetPath);
 
   // 配信優先順位の判定関数
+  /**
+   * @param {string} filePath
+   */
   const serveFile = (filePath, isPackageFile = false) => {
     // セキュリティチェック（ディレクトリトラバーサル対策）
     const baseDir = isPackageFile ? PACKAGE_LIB_DIR : WORKING_DIR;
@@ -49,7 +52,8 @@ const server = http.createServer((req, res) => {
         res.writeHead(500);
         res.end(`Server Error: ${err.code}`);
       } else {
-        res.writeHead(200, { 'Content-Type': mimeTypes[extname] || 'application/octet-stream' });
+        // @ts-expect-error: undefined fallback
+        res.writeHead(200, { 'Content-Type': mimeTypes[extname] ?? 'application/octet-stream' });
         res.end(content, 'utf-8');
       }
     });
@@ -81,7 +85,7 @@ wss.on('connection', (ws) => {
   /** @type {import('child_process').ChildProcessWithoutNullStreams | null} */
   let ffmpeg = null;
   let config = null;
-  let isCompleted = false; // 追加: 正常に全フレームを受信したかどうかのフラグ
+  let isCompleted = false;
 
   // 一時ファイルを削除するヘルパー関数
   const cleanupTempFiles = () => {
@@ -122,6 +126,7 @@ wss.on('connection', (ws) => {
       const header = message.slice(0, 4).toString();
       if (header === 'RIFF') {
         console.log('Received mixed audio WAV from client.');
+        // @ts-expect-error: ws buffer type
         fs.writeFileSync('temp_audio.wav', message);
       } else {
         if (ffmpeg) ffmpeg.stdin.write(message);
@@ -146,7 +151,7 @@ wss.on('connection', (ws) => {
       '-y', '-i', 'temp_video.mp4', '-i', 'temp_audio.wav',
       '-c:v', 'copy', '-c:a', 'aac', '-shortest', 'output.mp4'
     ]);
-    mergeProc.on('close', (code) => {
+    mergeProc.on('close', (_code) => {
       console.log(`Render complete! Result saved as output.mp4`);
       cleanupTempFiles(); // 成功時も一時ファイルを削除
     });
