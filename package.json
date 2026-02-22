@@ -1,11 +1,27 @@
 {
   "name": "mudai",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "type": "module",
   "description": "",
   "scripts": {
+    "check": "tsc"
   },
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-or-later",
-  "packageManager": "pnpm@10.28.0"
+  "bin": {
+    "mudai": "./server.js"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./*": "./lib/*.js"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.9.3"
+  }
 }
