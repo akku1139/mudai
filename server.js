@@ -20,55 +20,53 @@ const WORKING_DIR = process.cwd();
 
 const server = http.createServer((req, res) => {
   const decodedUrl = decodeURIComponent(req.url || '');
-  const targetPath = decodedUrl === '/' ? '/index.html' : decodedUrl;
 
-  // 1. カレントディレクトリ内のパスを生成
-  const localPath = path.join(WORKING_DIR, targetPath);
-  // 2. パッケージ内部のパスを生成
-  const packagePath = path.join(PACKAGE_LIB_DIR, targetPath);
+  // 先頭の / を除去し、空文字の場合は index.html にする
+  // これにより path.join(WORKING_DIR, 'index.html') となり、確実に直下を探せる
+  const trimmedPath = decodedUrl.replace(/^\/+/, '') || 'index.html';
 
-  // 配信優先順位の判定関数
-  /**
-   * @param {string} filePath
-   */
-  const serveFile = (filePath, isPackageFile = false) => {
-    // セキュリティチェック（ディレクトリトラバーサル対策）
-    const baseDir = isPackageFile ? PACKAGE_LIB_DIR : WORKING_DIR;
+  const localPath = path.join(WORKING_DIR, trimmedPath);
+  const packagePath = path.join(PACKAGE_LIB_DIR, trimmedPath);
+
+  const serveFile = (filePath, baseDir) => {
+    // filePath が baseDir の配下に本当にあるか厳密にチェック
     const relative = path.relative(baseDir, filePath);
+    const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+
+    // root (index.html) の場合 relative が "index.html" になるため OK
+    // 万が一一致してしまった場合 (relative === "") も許容するなら以下
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
       res.writeHead(403);
       res.end('403 Forbidden');
       return;
     }
 
-    const extname = String(path.extname(filePath)).toLowerCase();
-    const mimeTypes = {
-      '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
-      '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml'
-    };
-
     fs.readFile(filePath, (err, content) => {
       if (err) {
+        // ファイルが存在しない場合はここではなく fs.access 側で制御する
         res.writeHead(500);
         res.end(`Server Error: ${err.code}`);
       } else {
-        // @ts-expect-error: undefined fallback
+        const extname = String(path.extname(filePath)).toLowerCase();
+        const mimeTypes = {
+          '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+          '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml'
+        };
         res.writeHead(200, { 'Content-Type': mimeTypes[extname] ?? 'application/octet-stream' });
         res.end(content, 'utf-8');
       }
     });
   };
 
-  // 実行フロー: カレントディレクトリを優先的に確認
+  // 1. カレントディレクトリ (WORKING_DIR) を最優先にチェック
   fs.access(localPath, fs.constants.F_OK, (err) => {
     if (!err) {
-      // カレントディレクトリにファイルが存在する場合 (timeline.js, assets/* など)
-      serveFile(localPath, false);
+      serveFile(localPath, WORKING_DIR);
     } else {
-      // カレントディレクトリになければ、パッケージ内部を探す (index.html, lib/* など)
+      // 2. なければパッケージ側 (PACKAGE_LIB_DIR) をチェック
       fs.access(packagePath, fs.constants.F_OK, (pkgErr) => {
         if (!pkgErr) {
-          serveFile(packagePath, true);
+          serveFile(packagePath, PACKAGE_LIB_DIR);
         } else {
           res.writeHead(404);
           res.end('404 Not Found');
