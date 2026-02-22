@@ -8,6 +8,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import process from 'node:process';
 
 const PORT = 3859;
 
@@ -16,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_LIB_DIR = path.join(__dirname, 'lib');
 
 // (B) 実行時のカレントディレクトリ
-const WORKING_DIR = process.cwd();
+const WORKING_DIR = process.env.PWD || process.env.INIT_CWD || process.cwd();
 
 const server = http.createServer((req, res) => {
   const decodedUrl = decodeURIComponent(req.url || '');
