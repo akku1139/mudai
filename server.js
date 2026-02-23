@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
+import os from 'node:os';
 
 const PORT = 3859;
 
@@ -81,15 +82,22 @@ const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   console.log('Client connected for rendering');
+
   /** @type {import('child_process').ChildProcessWithoutNullStreams | null} */
   let ffmpeg = null;
   let config = null;
   let isCompleted = false;
 
+  // 変更: OSの一時ディレクトリを使用し、セッション固有のファイル名を生成
+  const sessionId = Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
+  const tempVideoPath = path.join(os.tmpdir(), `temp_video_${sessionId}.mp4`);
+  const tempAudioPath = path.join(os.tmpdir(), `temp_audio_${sessionId}.wav`);
+  const outputPath = path.join(WORKING_DIR, 'output.mp4'); // 出力先はカレントディレクトリのまま
+
   // 一時ファイルを削除するヘルパー関数
   const cleanupTempFiles = () => {
-    fs.unlink('temp_video.mp4', () => {});
-    fs.unlink('temp_audio.wav', () => {});
+    fs.unlink(tempVideoPath, () => {});
+    fs.unlink(tempAudioPath, () => {});
   };
 
   ws.on('message', (message, isBinary) => {
@@ -98,19 +106,20 @@ wss.on('connection', (ws) => {
       if (data.type === 'config') {
         config = data;
         isCompleted = false;
-        console.log('Starting FFmpeg with CPU encoding...');
+        console.log(`Starting FFmpeg... Temp files: ${tempVideoPath}`);
+
         ffmpeg = spawn('ffmpeg', [
           '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo',
           '-s', `${config.width}x${config.height}`, '-pix_fmt', 'rgba', '-r', `${config.fps}`,
           '-i', '-',
           '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-          'temp_video.mp4'
+          tempVideoPath
         ]);
         ffmpeg.stderr.on('data', console.log);
 
         ffmpeg.on('close', (code) => {
           // 正常終了かつ音声が存在する場合のみマージを実行
-          if (isCompleted && code === 0 && fs.existsSync('temp_audio.wav')) {
+          if (isCompleted && code === 0 && fs.existsSync(tempAudioPath)) {
             mergeAudio();
           } else if (!isCompleted) {
             console.log('FFmpeg stopped unexpectedly. Cleanup complete.');
@@ -126,7 +135,7 @@ wss.on('connection', (ws) => {
       if (header === 'RIFF') {
         console.log('Received mixed audio WAV from client.');
         // @ts-expect-error: ws buffer type
-        fs.writeFileSync('temp_audio.wav', message);
+        fs.writeFileSync(tempAudioPath, message);
       } else {
         if (ffmpeg) ffmpeg.stdin.write(message);
       }
@@ -147,11 +156,11 @@ wss.on('connection', (ws) => {
   function mergeAudio() {
     console.log('Merging audio and video...');
     const mergeProc = spawn('ffmpeg', [
-      '-y', '-i', 'temp_video.mp4', '-i', 'temp_audio.wav',
-      '-c:v', 'copy', '-c:a', 'aac', '-shortest', 'output.mp4'
+      '-y', '-i', tempVideoPath, '-i', tempAudioPath,
+      '-c:v', 'copy', '-c:a', 'aac', '-shortest', outputPath
     ]);
     mergeProc.on('close', (_code) => {
-      console.log(`Render complete! Result saved as output.mp4`);
+      console.log(`Render complete! Result saved as ${outputPath}`);
       cleanupTempFiles(); // 成功時も一時ファイルを削除
     });
   }
