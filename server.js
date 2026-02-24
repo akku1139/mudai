@@ -143,7 +143,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    // 正常終了前に切断された場合（タブ閉じ、ネットワークエラー等）
+    // 正常終了前に切断された場合(タブ閉じ、ネットワークエラー等)
     if (!isCompleted && ffmpeg) {
       console.log('Client disconnected during render. Aborting and cleaning up...');
       ffmpeg.kill('SIGKILL'); // FFmpegプロセスを強制終了
