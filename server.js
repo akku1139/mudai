@@ -32,13 +32,16 @@ const server = http.createServer((req, res) => {
 
   /** @type {(f: string, b: string) => void} */
   const serveFile = (filePath, baseDir) => {
-    // filePath が baseDir の配下に本当にあるか厳密にチェック
-    const relative = path.relative(baseDir, filePath);
-    const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+    // 1. 両方のパスを絶対パスかつ正規化された状態にする (Resolve & Realpath)
+    // baseDir はあらかじめ絶対パスにしておくと効率的です
+    const absoluteBase = path.resolve(baseDir);
+    const absoluteTarget = path.resolve(filePath);
 
-    // root (index.html) の場合 relative が "index.html" になるため OK
-    // 万が一一致してしまった場合 (relative === "") も許容するなら以下
-    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    // 2. ターゲットがベースディレクトリの中に収まっているかチェック
+    // .startsWith を使うことで、ディレクトリの外に出ることを防ぐ
+    const isSafe = absoluteTarget.startsWith(absoluteBase);
+
+    if (!isSafe) {
       res.writeHead(403);
       res.end('403 Forbidden');
       return;
