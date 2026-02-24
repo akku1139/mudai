@@ -41,6 +41,8 @@ const server = http.createServer((req, res) => {
     // .startsWith を使うことで、ディレクトリの外に出ることを防ぐ
     const isSafe = absoluteTarget.startsWith(absoluteBase);
 
+    // FIXME: シンボリックリンクを用いた攻撃は防げないけど、どうせローカル
+    // FIXME: 大文字小文字混ぜられたらダメかもだけど、Windowsはサポートしないのでどうでもいい
     if (!isSafe) {
       res.writeHead(403);
       res.end('403 Forbidden');
