@@ -30,6 +30,7 @@ const server = http.createServer((req, res) => {
   const localPath = path.join(WORKING_DIR, trimmedPath);
   const packagePath = path.join(PACKAGE_LIB_DIR, trimmedPath);
 
+  /** @type {(f: string, b: string) => void} */
   const serveFile = (filePath, baseDir) => {
     // filePath が baseDir の配下に本当にあるか厳密にチェック
     const relative = path.relative(baseDir, filePath);
@@ -54,6 +55,7 @@ const server = http.createServer((req, res) => {
           '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
           '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml'
         };
+        // @ts-expect-error これはundefinedでいい
         res.writeHead(200, { 'Content-Type': mimeTypes[extname] ?? 'application/octet-stream' });
         res.end(content, 'utf-8');
       }
