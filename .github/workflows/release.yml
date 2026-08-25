@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      # packageManager フィールドから pnpm バージョンを解決する
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # レンダーのスモークテスト用。ubuntu-latest には同梱されているが、
+      # バージョン固定のためにも明示的に入れる
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Type check
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Smoke test (server / WebSocket / FFmpeg render)
+        run: node test/smoke.mjs
+
+  publish:
+    name: Publish to npm (Trusted Publisher)
+    needs: test
+    runs-on: ubuntu-latest
+    # 手動起動 (workflow_dispatch) の場合は publish せずテストのみ
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      # npm Trusted Publishing (OIDC) に必須。
+      # トークンをシークレットに持たず、短命なOIDCトークンで出版する
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify tag matches package version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME}"
+          if [ "${PKG_VERSION}" != "${TAG_VERSION}" ]; then
+            echo "::error::package.json version (${PKG_VERSION}) does not match pushed tag (${TAG_VERSION})"
+            exit 1
+          fi
+
+      # Trusted Publisher 登録済みの場合、NODE_AUTH_TOKEN 無しで出版できる
+      - name: Publish
+        run: npm publish --provenance --access public

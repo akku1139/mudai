@@ -1,20 +1,49 @@
 {
   "name": "mudai",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "type": "module",
-  "description": "",
+  "description": "React-like declarative video editing engine. Compose videos in JavaScript, preview in browser, render with FFmpeg.",
   "scripts": {
-    "check": "tsc"
+    "check": "tsc --noEmit",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node bin/mudai.js"
   },
-  "keywords": [],
+  "keywords": [
+    "video",
+    "canvas",
+    "animation",
+    "motion-graphics",
+    "declarative",
+    "ffmpeg"
+  ],
   "author": "",
   "license": "AGPL-3.0-or-later",
-  "bin": {
-    "mudai": "./server.js"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akku1139/mudai.git"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "mudai": "./bin/mudai.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "assets/",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
+    ".": "./dist/index.js",
     "./package.json": "./package.json",
-    "./*": "./lib/*.js"
+    "./*": "./dist/*"
+  },
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22"
   },
   "packageManager": "pnpm@10.28.0",
   "dependencies": {

@@ -3,6 +3,10 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "mudai/*": ["./src/*"]
+    },
 
     // Module
     "esModuleInterop": true,
@@ -10,8 +14,12 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true, // Windows...
 
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
+    // Emit
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "sourceMap": false,
+
     "allowJs": true,
     "checkJs": true,
 
@@ -28,5 +36,8 @@
     "types": [
       "node"
     ]
-  }
+  },
+  "include": [
+    "src"
+  ]
 }

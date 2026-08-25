@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mudai - declarative video engine</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "mudai/": "/__mudai__/"
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #0d0d12;
+      --panel: rgba(18, 18, 26, 0.92);
+      --border: #2a2a38;
+      --accent: #7c6cff;
+      --text: #e8e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, Menlo, monospace;
+      overflow: hidden;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    #stage { position: relative; }
+    canvas {
+      background: #000;
+      box-shadow: 0 4px 40px rgba(0,0,0,.6);
+      transform-origin: center center;
+    }
+    #controls {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: var(--panel);
+      padding: 12px 16px;
+      border-radius: 10px;
+      width: min(720px, calc(100vw - 24px));
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .row + .row { margin-top: 10px; }
+    button {
+      padding: 7px 14px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: inherit;
+      background: #26263a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: #33334c; border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary:hover:not(:disabled) { background: #9488ff; }
+    input[type=range] { flex-grow: 1; accent-color: var(--accent); }
+    #statsPanel { color: #8f8fa8; font-size: .85em; flex-grow: 1; }
+    #progressWrap { flex-grow: 1; }
+    #progressBar {
+      height: 6px; background: #26263a; border-radius: 3px; overflow: hidden;
+    }
+    #progressFill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #4cd4ff);
+      transition: width .15s ease;
+    }
+    #statusText { font-size: .85em; color: #8f8fa8; margin-top: 4px; min-height: 1.2em; }
+    #outputName {
+      width: 130px; padding: 6px 8px; background: #1a1a26;
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: inherit; font-size: .9em;
+    }
+    kbd {
+      background: #26263a; border: 1px solid var(--border); border-bottom-width: 2px;
+      border-radius: 4px; padding: 1px 5px; font-size: .8em;
+    }
+    #helpText { color: #565670; font-size: .78em; margin-top: 8px; }
+    #overlay {
+      position: fixed; inset: 0; display: none;
+      align-items: center; justify-content: center;
+      background: rgba(8,8,12,.82); z-index: 50; color: var(--text);
+      font-size: 1.05em; text-align: center; line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"><canvas id="renderCanvas"></canvas></div>
+
+  <div id="overlay"></div>
+
+  <div id="controls">
+    <div class="row">
+      <div id="statsPanel">Loading...</div>
+      <div id="progressWrap">
+        <div id="progressBar"><div id="progressFill"></div></div>
+        <div id="statusText"></div>
+      </div>
+    </div>
+    <div class="row">
+      <button id="btnPlay">▶ Play</button>
+      <button id="btnReset">⏮ Reset</button>
+      <input type="range" id="seekBar" min="0" max="100" value="0" step="0.001">
+      <span id="timeText">0.00 / 0.00</span>
+      <input id="outputName" type="text" value="output.mp4" spellcheck="false">
+      <button id="btnRender" class="primary">Render</button>
+    </div>
+    <div id="helpText">
+      <kbd>Space</kbd> play/pause ·
+      <kbd>←</kbd><kbd>→</kbd> frame step ·
+      <kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> 1s ·
+      <kbd>Home</kbd>/<kbd>End</kbd> jump
+    </div>
+  </div>
+
+  <script type="module" src="/__mudai__/main.js"></script>
+</body>
+</html>
