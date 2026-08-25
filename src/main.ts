@@ -196,6 +196,26 @@ async function bootstrap(): Promise<void> {
   window.addEventListener('beforeunload', (e) => {
     if (engine.isRendering) e.preventDefault();
   });
+
+  // --- ライブリロード (プロジェクトソースの変更を検知して自動リロード) ---
+  let lastMtime = 0;
+  const checkMtime = async (): Promise<void> => {
+    try {
+      const res = await fetch('/__mudai__/mtime', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as { mtime: number };
+      if (lastMtime === 0) {
+        lastMtime = data.mtime;
+      } else if (data.mtime > lastMtime) {
+        console.log('[mudai] source changed, reloading...');
+        location.reload();
+      }
+    } catch {
+      // サーバー切断時は無視
+    }
+  };
+  void checkMtime();
+  setInterval(() => void checkMtime(), 1000);
 }
 
 bootstrap().catch((err: unknown) => {

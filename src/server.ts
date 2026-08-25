@@ -227,6 +227,52 @@ function serveFromDirs(
   tryDir(0);
 }
 
+/**
+ * プロジェクトソース (timeline.js と components/, audio/, images/) の
+ * 最新 mtime を JSON で返す。ライブリロード判定用。
+ */
+function statMtime(workingDir: string, res: http.ServerResponse): void {
+  const roots = [
+    path.join(workingDir, 'timeline.js'),
+    path.join(workingDir, 'components'),
+    path.join(workingDir, 'audio'),
+    path.join(workingDir, 'images')
+  ];
+
+  let latest = 0;
+  let pending = roots.length;
+
+  const finish = (): void => {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({ mtime: latest }));
+  };
+
+  const walk = (p: string): void => {
+    fs.stat(p, (err, st) => {
+      if (!err) {
+        if (st.isDirectory()) {
+          fs.readdir(p, (e2, files) => {
+            if (e2) {
+              if (--pending === 0) finish();
+              return;
+            }
+            pending += files.length;
+            for (const f of files) walk(path.join(p, f));
+            if (--pending === 0 && files.length === 0) finish();
+          });
+        } else {
+          latest = Math.max(latest, st.mtimeMs);
+          if (--pending === 0) finish();
+        }
+      } else if (--pending === 0) {
+        finish();
+      }
+    });
+  };
+
+  for (const r of roots) walk(r);
+}
+
 function createRequestHandler(workingDir: string): http.RequestListener {
   return (req, res) => {
     let decodedUrl: string;
@@ -244,6 +290,12 @@ function createRequestHandler(workingDir: string): http.RequestListener {
       const absTarget = path.resolve(target);
       return absTarget.startsWith(absBase) || absTarget === path.resolve(base);
     };
+
+    // プロジェクトの最終更新時刻 (ライブリロード用) — /__mudai__/ より先に判定
+    if (trimmedPath === '__mudai__/mtime') {
+      statMtime(workingDir, res);
+      return;
+    }
 
     // /__mudai__/* → パッケージ内アセット (dist/、assets/)
     if (trimmedPath.startsWith('__mudai__/')) {
